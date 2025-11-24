@@ -21,11 +21,19 @@ node<T>* tournament_tree(const vector<T>& items){
     while (q.size() >1)
     {
         node<T>* a = q.front(); q.pop();
-        node<T>* b = q.front(); q.pop();
-
-        node<T>* parent = new node<T>();
-        parent->left = a;
-        parent->right = b;
+        node<T>* parent;
+        if (!q.empty())
+        {
+            node<T>* b = q.front(); q.pop();
+            parent = new node<T>();
+            parent->left = a;
+            parent->right = b;
+            parent->data = (a->data < b->data);
+            
+        }else
+        {
+            parent = a;
+        }
         q.push(parent);
     }
     
