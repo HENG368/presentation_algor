@@ -4,6 +4,7 @@
 #include <string>
 #include <random>
 #include <vector>
+#include "rng.hpp"
 
 using namespace std;
 
@@ -11,9 +12,8 @@ struct Node {
     string Name;
     int value = 0;
     void setRandomValue(int min = 0, int max = 100) {
-        static thread_local std::mt19937 gen{std::random_device{}()};
         std::uniform_int_distribution<int> dist(min, max);
-        value = dist(gen);
+        value = dist(rng::get());
     }
 };
 // Global container for nodes. Use `inline` to allow inclusion from multiple TUs.
