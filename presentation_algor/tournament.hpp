@@ -12,13 +12,36 @@
 
 namespace tournament {
 
-// Play a match between two players and return the winner (by value).
-inline Node playMatch(const Node &a, const Node &b) {
-    if (a.value > b.value) return a;
-    if (b.value > a.value) return b;
-    // tie -> random winner
-    std::uniform_int_distribution<int> d(0, 1);
-    return d(rng::get()) ? a : b;
+// Match record for history
+struct Match {
+    Node a;
+    // b may be empty (bye) - use Name=="" to indicate no opponent
+    Node b;
+    Node winner;
+    int scoreA = 0;
+    int scoreB = 0;
+};
+
+// Play a match between two players and return the match record (with per-match scores).
+inline Match playMatch(const Node &a, const Node &b) {
+    // generate per-match random scores in range [0,100]
+    std::uniform_int_distribution<int> dist(0, 100);
+    int scoreA = dist(rng::get());
+    int scoreB = dist(rng::get());
+
+    Match m;
+    m.a = a;
+    m.b = b;
+    m.scoreA = scoreA;
+    m.scoreB = scoreB;
+    if (scoreA > scoreB) m.winner = a;
+    else if (scoreB > scoreA) m.winner = b;
+    else {
+        // tie -> random winner
+        std::uniform_int_distribution<int> d(0, 1);
+        m.winner = d(rng::get()) ? a : b;
+    }
+    return m;
 }
 
 // Run a single-elimination tournament on a vector of Nodes.
@@ -34,8 +57,8 @@ inline Node runKnockout(std::vector<Node> players) {
         // If odd number, give a bye to last player
         size_t i = 0;
         for (; i + 1 < players.size(); i += 2) {
-            Node winner = playMatch(players[i], players[i+1]);
-            nextRound.push_back(winner);
+            Match m = playMatch(players[i], players[i+1]);
+            nextRound.push_back(m.winner);
         }
         if (i < players.size()) {
             // bye
@@ -46,14 +69,6 @@ inline Node runKnockout(std::vector<Node> players) {
 
     return players.front();
 }
-
-// Match record for history
-struct Match {
-    Node a;
-    // b may be empty (bye) - use Name=="" to indicate no opponent
-    Node b;
-    Node winner;
-};
 
 // Result structure containing champion and per-round match history
 struct KnockoutResult {
@@ -75,14 +90,13 @@ inline KnockoutResult runKnockoutWithHistory(std::vector<Node> players) {
         std::vector<Match> matchesThisRound;
         size_t i = 0;
         for (; i + 1 < players.size(); i += 2) {
-            Node winner = playMatch(players[i], players[i+1]);
-            Match m{players[i], players[i+1], winner};
+            Match m = playMatch(players[i], players[i+1]);
             matchesThisRound.push_back(m);
-            nextRound.push_back(winner);
+            nextRound.push_back(m.winner);
         }
         if (i < players.size()) {
             // bye
-            Match m{players[i], Node{}, players[i]};
+            Match m; m.a = players[i]; m.b = Node{}; m.winner = players[i]; m.scoreA = 0; m.scoreB = 0;
             matchesThisRound.push_back(m);
             nextRound.push_back(players[i]);
         }
