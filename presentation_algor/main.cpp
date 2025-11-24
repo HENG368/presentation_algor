@@ -16,15 +16,7 @@ int main() {
     addRandomNode("caroy", 1, 100);
     addRandomNode("Eve", 1, 100);
     addRandomNode("Frank", 1, 100);
-<<<<<<< HEAD
-    addRandomNode("Grace", 1, 100);
-=======
-    addRandomNode("danile", 1, 100);
-    
-    
-
->>>>>>> 5d6b74fab466a3c5c1ad982f587e1e3b8c6ba90f
-
+    addRandomNode("Niko",1,100);
     std::vector<Node> players = nodes; // copy local list
 
     // If number of candidates is not a power of two, inform and exit
