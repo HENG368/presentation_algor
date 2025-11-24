@@ -5,12 +5,23 @@
 #include <algorithm>
 #include <random>
 #include <iostream>
+#include <unordered_map>
 
 // Simple single-elimination knockout tournament utilities.
 // - Works with `Node` (Name + value).
 // - Plays matches by comparing `value`; higher wins. If equal, random tie-breaker.
 
 namespace tournament {
+
+// Optional preassigned first-match scores (name -> score). If present and not used,
+// playMatch will use this score for the player's next match and then mark it used.
+inline std::unordered_map<std::string,int> firstMatchScore;
+inline std::unordered_map<std::string,bool> firstMatchUsed;
+
+inline void clearFirstMatchData() {
+    firstMatchScore.clear();
+    firstMatchUsed.clear();
+}
 
 // Match record for history
 struct Match {
@@ -26,8 +37,25 @@ struct Match {
 inline Match playMatch(const Node &a, const Node &b) {
     // generate per-match random scores in range [0,100]
     std::uniform_int_distribution<int> dist(0, 100);
-    int scoreA = dist(rng::get());
-    int scoreB = dist(rng::get());
+    int scoreA, scoreB;
+
+    // If there's a preassigned first-match score for a and it hasn't been used yet,
+    // use it and mark it used. Otherwise generate a random score.
+    auto itA = firstMatchScore.find(a.Name);
+    if (itA != firstMatchScore.end() && !firstMatchUsed[a.Name]) {
+        scoreA = itA->second;
+        firstMatchUsed[a.Name] = true;
+    } else {
+        scoreA = dist(rng::get());
+    }
+
+    auto itB = firstMatchScore.find(b.Name);
+    if (itB != firstMatchScore.end() && !firstMatchUsed[b.Name]) {
+        scoreB = itB->second;
+        firstMatchUsed[b.Name] = true;
+    } else {
+        scoreB = dist(rng::get());
+    }
 
     Match m;
     m.a = a;

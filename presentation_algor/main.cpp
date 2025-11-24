@@ -16,9 +16,7 @@ int main() {
     addRandomNode("caroy", 1, 100);
     addRandomNode("Eve", 1, 100);
     addRandomNode("Frank", 1, 100);
-    
-    
-
+    addRandomNode("Grace", 1, 100);
 
     std::vector<Node> players = nodes; // copy local list
 
@@ -33,14 +31,22 @@ int main() {
         return 0;
     }
 
+    // Preassign first-match scores for each candidate and clear usage flags
+    std::uniform_int_distribution<int> dist(0, 100);
+    for (const auto &p : players) {
+        tournament::firstMatchScore[p.Name] = dist(rng::get());
+        tournament::firstMatchUsed[p.Name] = false;
+    }
+
     // Run tournament with history so we can show champion's matches and scores
     auto result = tournament::runKnockoutWithHistory(players);
     const Node &champion = result.champion;
 
-    // Print candidates (no preset scores shown)
+    // Print candidates with their first-match score
     std::cout << "Candidates:\n";
     for (const auto &p : players) {
-        std::cout << p.Name << "\n";
+        int s = tournament::firstMatchScore[p.Name];
+        std::cout << p.Name << "(" << s << ")\n";
     }
 
     // Determine champion's final match score (look for last non-empty match)
