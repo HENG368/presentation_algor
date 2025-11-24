@@ -16,6 +16,7 @@ int main() {
     addRandomNode("caroy", 1, 100);
     addRandomNode("Eve", 1, 100);
     addRandomNode("Frank", 1, 100);
+    addRandomNode("danile", 1, 100);
     
     
 
