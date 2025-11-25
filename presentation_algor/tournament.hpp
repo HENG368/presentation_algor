@@ -1,182 +1,43 @@
 #pragma once
+#include <queue>
+#include <vector>
 
-#include "condidate.hpp"
-#include "rng.hpp"
-#include <algorithm>
-#include <random>
-#include <iostream>
-#include <unordered_map>
-
-// Simple single-elimination knockout tournament utilities.
-// - Works with `Node` (Name + value).
-// - Plays matches by comparing `value`; higher wins. If equal, random tie-breaker.
-
-namespace tournament {
-
-// Optional preassigned first-match scores (name -> score). If present and not used,
-// playMatch will use this score for the player's next match and then mark it used.
-inline std::unordered_map<std::string,int> firstMatchScore;
-inline std::unordered_map<std::string,bool> firstMatchUsed;
-
-inline void clearFirstMatchData() {
-    firstMatchScore.clear();
-    firstMatchUsed.clear();
-}
-
-// Match record for history
-struct Match {
-    Node a;
-    // b may be empty (bye) - use Name=="" to indicate no opponent
-    Node b;
-    Node winner;
-    int scoreA = 0;
-    int scoreB = 0;
+template <typename T>
+struct TreeNode {
+    T data;
+    TreeNode* left = nullptr;
+    TreeNode* right = nullptr;
 };
 
-// Play a match between two players and return the match record (with per-match scores).
-inline Match playMatch(const Node &a, const Node &b) {
-    // generate per-match random scores in range [0,100]
-    std::uniform_int_distribution<int> dist(0, 100);
-    int scoreA, scoreB;
+// Build tournament tree
+template <typename T>
+TreeNode<T>* tournament_tree(const std::vector<T>& items, bool (*isWinner)(T, T)) {
+    std::queue<TreeNode<T>*> q;
 
-    // If there's a preassigned first-match score for a and it hasn't been used yet,
-    // use it and mark it used. Otherwise generate a random score.
-    auto itA = firstMatchScore.find(a.Name);
-    if (itA != firstMatchScore.end() && !firstMatchUsed[a.Name]) {
-        scoreA = itA->second;
-        firstMatchUsed[a.Name] = true;
-    } else {
-        scoreA = dist(rng::get());
+    // create leaf nodes
+    for (const T& item : items) {
+        TreeNode<T>* leaf = new TreeNode<T>();
+        leaf->data = item;
+        q.push(leaf);
     }
 
-    auto itB = firstMatchScore.find(b.Name);
-    if (itB != firstMatchScore.end() && !firstMatchUsed[b.Name]) {
-        scoreB = itB->second;
-        firstMatchUsed[b.Name] = true;
-    } else {
-        scoreB = dist(rng::get());
+    // build tournament
+    while (q.size() > 1) {
+        TreeNode<T>* a = q.front(); q.pop();
+        TreeNode<T>* parent;
+
+        if (!q.empty()) {
+            TreeNode<T>* b = q.front(); q.pop();
+            parent = new TreeNode<T>();
+            parent->left = a;
+            parent->right = b;
+            parent->data = isWinner(a->data, b->data) ? a->data : b->data;
+        } else {
+            parent = a; // odd player
+        }
+
+        q.push(parent);
     }
 
-    Match m;
-    m.a = a;
-    m.b = b;
-    m.scoreA = scoreA;
-    m.scoreB = scoreB;
-    if (scoreA > scoreB) m.winner = a;
-    else if (scoreB > scoreA) m.winner = b;
-    else {
-        // tie -> random winner
-        std::uniform_int_distribution<int> d(0, 1);
-        m.winner = d(rng::get()) ? a : b;
-    }
-    return m;
+    return q.front();
 }
-
-// Run a single-elimination tournament on a vector of Nodes.
-// If the number of players is not a power of two, byes are given randomly.
-inline Node runKnockout(std::vector<Node> players) {
-    if (players.empty()) throw std::runtime_error("No players provided");
-
-    // Shuffle players first for randomness
-    std::shuffle(players.begin(), players.end(), rng::get());
-
-    while (players.size() > 1) {
-        std::vector<Node> nextRound;
-        // If odd number, give a bye to last player
-        size_t i = 0;
-        for (; i + 1 < players.size(); i += 2) {
-            Match m = playMatch(players[i], players[i+1]);
-            nextRound.push_back(m.winner);
-        }
-        if (i < players.size()) {
-            // bye
-            nextRound.push_back(players[i]);
-        }
-        players.swap(nextRound);
-    }
-
-    return players.front();
-}
-
-// Result structure containing champion and per-round match history
-struct KnockoutResult {
-    Node champion;
-    // rounds[i] are the matches that happened in round i (0-based)
-    std::vector<std::vector<Match>> rounds;
-};
-
-// Run knockout and also return per-round match history.
-inline KnockoutResult runKnockoutWithHistory(std::vector<Node> players) {
-    if (players.empty()) throw std::runtime_error("No players provided");
-    KnockoutResult result;
-
-    // Shuffle players first for randomness
-    std::shuffle(players.begin(), players.end(), rng::get());
-
-    while (players.size() > 1) {
-        std::vector<Node> nextRound;
-        std::vector<Match> matchesThisRound;
-        size_t i = 0;
-        for (; i + 1 < players.size(); i += 2) {
-            Match m = playMatch(players[i], players[i+1]);
-            matchesThisRound.push_back(m);
-            nextRound.push_back(m.winner);
-        }
-        if (i < players.size()) {
-            // bye
-            Match m; m.a = players[i]; m.b = Node{}; m.winner = players[i]; m.scoreA = 0; m.scoreB = 0;
-            matchesThisRound.push_back(m);
-            nextRound.push_back(players[i]);
-        }
-        result.rounds.push_back(std::move(matchesThisRound));
-        players.swap(nextRound);
-    }
-
-    result.champion = players.front();
-    return result;
-}
-
-// Return a vector of opponents that the champion faced in each round (0-based).
-// If the champion had a bye in a round, the corresponding entry will have an empty Name.
-inline std::vector<Node> championOpponents(const KnockoutResult &res) {
-    std::vector<Node> opponents;
-    for (const auto &round : res.rounds) {
-        bool found = false;
-        for (const auto &m : round) {
-            if (m.winner.Name == res.champion.Name) {
-                // opponent is the other player
-                if (m.a.Name == res.champion.Name) opponents.push_back(m.b);
-                else opponents.push_back(m.a);
-                found = true;
-                break;
-            }
-        }
-        if (!found) {
-            // champion did not appear as a winner in this round (e.g., didn't play)
-            opponents.push_back(Node{});
-        }
-    }
-    return opponents;
-}
-
-// Return the actual Match records that the champion played (one per round they played).
-inline std::vector<Match> championMatches(const KnockoutResult &res) {
-    std::vector<Match> out;
-    for (const auto &round : res.rounds) {
-        bool found = false;
-        for (const auto &m : round) {
-            if (m.winner.Name == res.champion.Name) {
-                out.push_back(m);
-                found = true;
-                break;
-            }
-        }
-        if (!found) {
-            // champion didn't have a winning match this round (e.g., didn't play)
-            out.push_back(Match{Node{}, Node{}, Node{}});
-        }
-    }
-    return out;
-}
-
-} // namespace tournament
