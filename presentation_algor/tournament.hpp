@@ -7,6 +7,7 @@ struct TreeNode {
     T data;
     TreeNode* left = nullptr;
     TreeNode* right = nullptr;
+    TreeNode* parent = nullptr;
 };
 
 // Build tournament tree
@@ -31,6 +32,8 @@ TreeNode<T>* tournament_tree(const std::vector<T>& items, bool (*isWinner)(T, T)
             parent = new TreeNode<T>();
             parent->left = a;
             parent->right = b;
+            a->parent = parent;
+            b->parent = parent;
             parent->data = isWinner(a->data, b->data) ? a->data : b->data;
         } else {
             parent = a; // odd player
