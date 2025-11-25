@@ -1,7 +1,7 @@
 #include <iostream>
 #include <vector>
 #include "condidate.hpp"
-#include "tree.hpp"
+#include "tournament.hpp"
 #include "rng.hpp"
 #include <type_traits>
 #include <cmath>
