@@ -42,5 +42,5 @@ TreeNode<T>* tournament_tree(const std::vector<T>& items, bool (*isWinner)(T, T)
         q.push(parent);
     }
 
-    return q.front();
+    //return q.front();
 }
